@@ -29,3 +29,6 @@ from .parsers.tv.api import router
 app.include_router(router)
 from .parsers.eneyida.api import router
 app.include_router(router)
+
+from .parsers.uakino.api import router
+app.include_router(router)

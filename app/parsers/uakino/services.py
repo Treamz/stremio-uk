@@ -7,6 +7,10 @@ import json
 from .utils import extract_numbers
 import re
 
+headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
+        "Referer": "https://uakino.me/"
+    }
 
 async def get_session():
     async with aiohttp.ClientSession() as session:
@@ -16,15 +20,17 @@ async def get_session():
 async def get_previews_metadata(response_data, type_) -> dict[str, list[Preview]]:
     previews_metadata = {"metas": []}
     soup = BeautifulSoup(response_data, "html.parser")
-    for item in soup.find_all("article", class_="short"):
+    print(soup)
+    for item in soup.find_all("div", class_="movie-item"):
+        print(item)
         previews_metadata["metas"].append(
             Preview(
-                id=item.find("a", class_="short_title")["href"].split("/")[-1].split(".")[0],
+                id=item.find("a", class_="movie-title")["href"].split("/")[-1].split(".")[0],
                 type=type_,
-                name=item.find("a", class_="short_title").text,
+                name=item.find("a", class_="movie-title").text,
                 genres=[],
-                poster=f"https://eneyida.tv{item.find('img')['data-src']}",
-                description=item.find("div", class_="short_subtitle").text,
+                poster=f"https://uakino.me{item.find('img')['src']}",
+                description=item.find("span", class_="desc-about-text").text,
             )
         )
 
@@ -35,18 +41,18 @@ async def get_series_metadata(
     id: str, response_text: str, videos: list[Videos], type_title: str
 ) -> dict[str, Series]:
     soup = BeautifulSoup(response_text, "html.parser")
-    full_info = soup.find("ul", class_="full_info").find_all("li")
+    full_info = soup.find("div", class_="full-text").find_all("span")
     return {
         "meta": Series(
             id=f"{id}",
             type=type_title,
-            name=soup.find("div", class_="full_header-title").find("h1").text,
-            poster=f'{settings.main_url}{soup.find("div", class_="full_content-poster").find("img")["src"]}',
-            genres=[tag.text for tag in full_info[1].find_all("a")],
-            description=soup.find("article", class_="full_content-desc").text,
+            name=soup.find("div", class_="alltitle").find("span").text,
+            poster = f"{settings.main_url}{soup.select_one('.film-poster img').get('src')}",
+            genres = [tag.text.strip() for tag in soup.select('[itemprop="genre"] a')],
+            description=soup.find("div", class_="full-text").text,
             director=[],
             runtime="",
-            background=f'{settings.main_url}{soup.find("div", class_="full_content-poster").find("img")["src"]}',
+            background= f"{settings.main_url}{soup.select_one('.film-poster img').get('src')}",
             videos=videos,
         )
     }
@@ -58,15 +64,15 @@ async def get_videos(
     videos = []
 
     soup = BeautifulSoup(response_text, "html.parser")
-    print(soup.select_one(".tabs_b.visible iframe")["src"])
-    async with session.get(soup.select_one(".tabs_b.visible iframe")["src"]) as response:
-        if "/vid/" in soup.select_one(".tabs_b.visible iframe")["src"]:
+    print(soup)
+    async with session.get(soup.select_one(".box.full-text.visible iframe")["src"]) as response:
+        if "/vod/" in soup.select_one(".box.full-text.visible iframe")["src"]:
             plr_soup = BeautifulSoup(await response.text(), "html.parser")
             videos.append(
                 Videos(
                     id=f'{id}',
-                    title=soup.find("div", class_="full_header-title").find("h1").text,
-                    thumbnail=soup.select_one(".full_header__bg-img").get('style').split("(")[1][:-2],
+                    title=soup.find("div", class_="alltitle").find("span").text,
+                    thumbnail = soup.select_one(".film-poster img").get('src'),
                     released=None,
                     season=None,
                     episode=None,
@@ -117,10 +123,11 @@ async def get_streams(
     streams = {"streams": []}
 
     soup = BeautifulSoup(response_text, "html.parser")
-    async with session.get(soup.select_one(".tabs_b.visible iframe")["src"]) as response:
+
+    async with session.get(soup.select_one(".box.full-text.visible iframe")["src"]) as response:
 
         plr_soup = BeautifulSoup(await response.text(), "html.parser")
-        if "/vid/" in soup.select_one(".tabs_b.visible iframe")["src"]:
+        if "/vod/" in soup.select_one(".box.full-text.visible iframe")["src"]:
             script_tag = plr_soup.body.find("script")
             print(script_tag)
             if not script_tag:

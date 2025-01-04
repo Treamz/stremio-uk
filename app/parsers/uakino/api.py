@@ -1,6 +1,7 @@
 from fastapi import Depends, APIRouter
 from fastapi_cache.decorator import cache
 from app.schemas import Manifest, Catalogs, Preview, Series, Stream
+from urllib.parse import urlencode
 
 from .settings import settings
 from .services import (
@@ -13,24 +14,28 @@ from .services import (
 
 import aiohttp
 
-router = APIRouter(prefix="/eneyida")
+router = APIRouter(prefix="/uakino")
 
+headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
+            "Referer": "https://uakino.me/"
+    }
 
 @router.get("/manifest.json", tags=[settings.name])
 @cache()
 def addon_manifest() -> Manifest:
     manifest = Manifest(
-        id="ua.cakestwix.stremio.eneyida",
+        id="ua.cakestwix.stremio.uakino",
         version="1.1.0",
         logo=f"https://www.google.com/s2/favicons?domain={settings.main_url}&sz=128",
-        name="Eneyida",
-        description="Мета проекту «Енеїда» - популяризація української мови, демонстрація її різнобарвності та сучасності. Ми плануємо робити це через ретрансляцію якісного кіно, мультфільмів, телесеріалів та різноманітних телешоу в якісному українському перекладі. Тож, у добрий шлях дорогі конфіденти!.",
+        name="UAKino",
+        description="Мета проекту «UAKino» - популяризація української мови, демонстрація її різнобарвності та сучасності. Ми плануємо робити це через ретрансляцію якісного кіно, мультфільмів, телесеріалів та різноманітних телешоу в якісному українському перекладі. Тож, у добрий шлях дорогі конфіденти!.",
         types=["movie", "series"],
         catalogs=[
             Catalogs(
                 type=item[1],
-                id=f"eneyida_{item[2]}",
-                name=f"{item[0]}/Eneyida",
+                id=f"uakino_{item[2]}",
+                name=f"{item[0]}/Uakino",
                 extra=[{"genres": "anime"}],
             )
             for item in [
@@ -53,8 +58,8 @@ def addon_manifest() -> Manifest:
     manifest.catalogs.append(
         Catalogs(
             type="series",
-            id=f"eneyida_search",
-            name=f"Eneyida Search",
+            id=f"uakino_search",
+            name=f"UAKino Search",
             extra=[{"name": "search", "isRequired": True}],
         )
     )
@@ -64,7 +69,7 @@ def addon_manifest() -> Manifest:
 
 
 # Catalog
-@router.get("/catalog/{type_}/eneyida_{value}.json", tags=[settings.name])
+@router.get("/catalog/{type_}/uakino_{value}.json", tags=[settings.name])
 @cache(expire=24 * 60)
 async def addon_catalog(
     type_: str,
@@ -77,7 +82,7 @@ async def addon_catalog(
 
 # Pagination
 @router.get(
-    "/catalog/{type_}/eneyida_{value}/skip={skip}.json", tags=[settings.name]
+    "/catalog/{type_}/uakino_{value}/skip={skip}.json", tags=[settings.name]
 )
 @cache(expire=24 * 60)
 async def addon_catalog_skip(
@@ -96,7 +101,8 @@ async def addon_catalog_skip(
 async def addon_meta(
     id: str, type_: str, session: aiohttp.ClientSession = Depends(get_session)
 ) -> dict[str, Series]:
-    async with session.get(f"{settings.main_url}/{id}.html") as response:
+    print(f"{settings.main_url}/{id}.html")
+    async with session.get(f"{settings.main_url}/{id}.html",headers=headers) as response:
         series_metadata = await get_series_metadata(
             id,
             await response.text(),
@@ -114,21 +120,28 @@ async def addon_meta(
 async def addon_stream(
     id: str, season: str = None, episode: str = None, session: aiohttp.ClientSession = Depends(get_session)
 ) -> dict[str, list[Stream]]:
-    async with session.get(f"{settings.main_url}/{id}.html") as response:
+    print(f"{settings.main_url}/{id}.html")
+    async with session.get(f"{settings.main_url}/{id}.html",headers=headers) as response:
         streams = await get_streams(id, season, episode, session, await response.text())
     return streams
 
 
 # Search
 @router.get(
-    "/catalog/series/eneyida_search/search={query}.json", tags=[settings.name]
+    "/catalog/series/uakino_search/search={query}.json", tags=[settings.name]
 )
 @cache(expire=24 * 60)
 async def addon_search(
     query: str,
     session: aiohttp.ClientSession = Depends(get_session),
 ) -> dict[str, list[Preview]]:
-    async with session.post(f"{settings.main_url}", data={"do": "search", "subaction": "search", "story": query}) as response:
+    query_params = {
+        "do": "search",
+        "subaction": "search",
+        "story": query,
+    }
+    url = f"{settings.main_url}?{urlencode(query_params)}"
+    async with session.post(f"{settings.main_url}", data={"do": "search", "subaction": "search", "story": query}, headers=headers) as response:
         response_data = await response.text()
 
     return await get_previews_metadata(response_data, "series")
