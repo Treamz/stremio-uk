@@ -25,8 +25,8 @@ headers = {
 @cache()
 def addon_manifest() -> Manifest:
     manifest = Manifest(
-        id="ua.cakestwix.stremio.uakino",
-        version="1.1.0",
+        id="ua.treamz.stremio.uakino",
+        version="1.0.0",
         logo=f"https://www.google.com/s2/favicons?domain={settings.main_url}&sz=128",
         name="UAKino",
         description="Мета проекту «UAKino» - популяризація української мови, демонстрація її різнобарвності та сучасності. Ми плануємо робити це через ретрансляцію якісного кіно, мультфільмів, телесеріалів та різноманітних телешоу в якісному українському перекладі. Тож, у добрий шлях дорогі конфіденти!.",
@@ -42,7 +42,7 @@ def addon_manifest() -> Manifest:
                 ["Фільми", "movie", "films"],
                 ["Серіали", "series", "series"],
                 ["Мультфильми", "movie", "cartoon"],
-                ["Мультсериали", "series", "cartoon-series"],
+                ["Мультсериали", "series", "cartoon/cartoonseries"],
                 ["Аніме", "series", "anime"],
             ]
         ],
@@ -76,7 +76,14 @@ async def addon_catalog(
     value: str,
     session: aiohttp.ClientSession = Depends(get_session),
 ) -> dict[str, list[Preview]]:
-    async with session.get(f"{settings.main_url}/{value}") as response:
+    if value == "anime":
+        value = "animeukr"
+    if value == "cartoon":
+        value = "cartoon/f/p.cat=23/sort=date;desc/"
+    if value == "cartoon-series":
+        value = "cartoon/cartoonseries"
+    print(f"{settings.main_url}/{value}")
+    async with session.get(f"{settings.main_url}/{value}",headers=headers) as response:
         return await get_previews_metadata(await response.text(), type_)
 
 
@@ -115,6 +122,7 @@ async def addon_meta(
 
 # Series
 @router.get("/stream/{type_}/{id}/{season}/{episode}.json", tags=[settings.name])
+@router.get("/stream/{type_}/{id}/{episode}.json", tags=[settings.name])
 @router.get("/stream/{type_}/{id}.json", tags=[settings.name])
 @cache(expire=24 * 60)
 async def addon_stream(

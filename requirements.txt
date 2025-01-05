@@ -7,3 +7,4 @@ uvicorn
 pydantic-settings
 httpx
 redis
+pip-system-certs
