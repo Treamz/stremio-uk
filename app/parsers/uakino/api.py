@@ -1,4 +1,5 @@
 from fastapi import Depends, APIRouter
+from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 from app.schemas import Manifest, Catalogs, Preview, Series, Stream
 from urllib.parse import urlencode
@@ -20,6 +21,11 @@ headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
             "Referer": "https://uakino.me/"
     }
+
+@router.get("/clear-cache")
+async def clear_cache():
+    await FastAPICache.clear()
+    return {"message": "Cache cleared successfully"}
 
 @router.get("/manifest.json", tags=[settings.name])
 @cache()

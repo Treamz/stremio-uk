@@ -26,7 +26,7 @@ async def get_previews_metadata(response_data, type_) -> dict[str, list[Preview]
             Preview(
                 id=item.find("a", class_="movie-title")["href"].split("/")[-1].split(".")[0],
                 type=type_,
-                name=item.find("a", class_="movie-title").text,
+                name=f"{item.find('a', class_='movie-title').text} ${(item.find('div', class_='full-season').text if item.find('div', class_='full-season') else '')}",
                 genres=[],
                 poster=f"https://uakino.me{item.find('img')['src']}",
                 description=item.find("span", class_="desc-about-text").text,
@@ -133,7 +133,6 @@ async def get_videos(
             print(playlist_soup)
             for episode in playlist_soup.select("div.playlists-videos li"):
                 title = episode.text.strip()
-                print(episode)
                 season = parse_first_number_from_data_id(episode)
                 episode_numbers = extract_numbers(title)
                 episode_number = episode_numbers[
@@ -146,7 +145,7 @@ async def get_videos(
                         title=title,
                         thumbnail=None,  # Thumbnail not provided in the example response
                         released=None,
-                        season=season,  # Extract season if provided
+                        season=1,  # Extract season if provided
                         episode=episode_number,
                     )
                 )

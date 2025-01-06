@@ -96,18 +96,21 @@ async def get_videos(
             for dub in plr_json:
                 for season in dub["folder"]:
                     for episode in season["folder"]:
-                        if episode["title"] not in seen_titles:
-                            seen_titles.add(episode["title"])
+                        sesson_episode = f'{episode["title"]}_{season["title"]}'
+                        if sesson_episode not in seen_titles:
+                            seen_titles.add(sesson_episode)
                             videos.append(
                                 Videos(
                                     id=f'{id}/{season["title"]}/{episode["title"]}',
-                                    title=episode["title"],
+                                    title=f'{episode["title"]}',
                                     thumbnail=episode["poster"],
                                     released=None,
                                     season=extract_numbers(season["title"])[0],
                                     episode=extract_numbers(episode["title"])[0],
                                 )
                             )
+
+    print(videos)
     return videos
 
 

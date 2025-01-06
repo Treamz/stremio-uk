@@ -28,18 +28,52 @@ def addon_manifest() -> Manifest:
         types=["movie", "series"],
         catalogs=[
             Catalogs(
-                type=item[1],
-                id=f"eneyida_{item[2]}",
-                name=f"{item[0]}/Eneyida",
-                extra=[{"genres": "anime"}],
+                type="movie",
+                id="eneyida_movie",
+                name="Фільми/Eneyida",
+                extra=[
+                    {"genres": "anime"},
+                    {"name": "skip", "isRequired": False}, ],
+            ),
+            Catalogs(
+                type="series",
+                id="eneyida_series",
+                name="Серіали/Eneyida",
+                extra=[
+                    {"genres": "anime"},
+                    {"name": "skip", "isRequired": False}, ],
+            ),
+            Catalogs(
+                type="cartoon",
+                id="eneyida_movie",
+                name="Мультфильми/Eneyida",
+                extra=[
+                    {"genres": "anime"},
+                    {"name": "skip", "isRequired": False}, ],
+            ),
+            Catalogs(
+                type="series",
+                id="eneyida_cartoon-series",
+                name="Мультсериали/Eneyida",
+                extra=[
+                    {"genres": "anime"},
+                    {"name": "skip", "isRequired": False}, ],
+            ),
+            Catalogs(
+                type="anime",
+                id="eneyida_series",
+                name="Аніме/Eneyida",
+                extra=[
+                    {"genres": "anime"},
+                    {"name": "skip", "isRequired": False}, ],
             )
-            for item in [
-                ["Фільми", "movie", "films"],
-                ["Серіали", "series", "series"],
-                ["Мультфильми", "movie", "cartoon"],
-                ["Мультсериали", "series", "cartoon-series"],
-                ["Аніме", "series", "anime"],
-            ]
+            # for item in [
+            #     ["Фільми", "movie", "films"],
+            #     ["Серіали", "series", "series"],
+            #     ["Мультфильми", "movie", "cartoon"],
+            #     ["Мультсериали", "series", "cartoon-series"],
+            #     ["Аніме", "series", "anime"],
+            # ]
         ],
         resources=[
             "catalog",
@@ -86,6 +120,7 @@ async def addon_catalog_skip(
     skip: int,
     session: aiohttp.ClientSession = Depends(get_session),
 ) -> dict[str, list[Preview]]:
+    print("SKIPP")
     async with session.get(f"{settings.main_url}/{value}/page/{int(skip / 24) + 1}/") as response:
         return await get_previews_metadata(await response.text(), type_)
 
