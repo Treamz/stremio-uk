@@ -8,6 +8,7 @@ import aiohttp
 
 router = APIRouter(prefix="/tv")
 
+
 @router.get(f"/{settings.name.lower()}/manifest.json", tags=[settings.name])
 def addon_manifest() -> Manifest:
     manifest = Manifest(
@@ -25,7 +26,15 @@ def addon_manifest() -> Manifest:
                 extra=[],
             )
         ],
-        resources=["catalog", "meta", "stream"],
+        resources=[
+            "catalog",
+            {
+                       "name": "meta",
+                       # "types": ["movie",],
+                       "idPrefixes": ["hiwrld_"]
+            },
+            "stream"
+        ],
     )
 
     return manifest

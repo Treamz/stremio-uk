@@ -4,7 +4,7 @@ from .settings import settings
 
 import aiohttp
 import json
-from .utils import extract_numbers
+from .utils import extract_numbers, extract_episode
 import re
 
 
@@ -19,7 +19,7 @@ async def get_previews_metadata(response_data, type_) -> dict[str, list[Preview]
     for item in soup.find_all("article", class_="short"):
         previews_metadata["metas"].append(
             Preview(
-                id=item.find("a", class_="short_title")["href"].split("/")[-1].split(".")[0],
+                id=f'eneyida_{item.find("a", class_="short_title")["href"].split("/")[-1].split(".")[0]}',
                 type=type_,
                 name=item.find("a", class_="short_title").text,
                 genres=[],
@@ -58,7 +58,6 @@ async def get_videos(
     videos = []
 
     soup = BeautifulSoup(response_text, "html.parser")
-    print(soup.select_one(".tabs_b.visible iframe")["src"])
     async with session.get(soup.select_one(".tabs_b.visible iframe")["src"]) as response:
         if "/vid/" in soup.select_one(".tabs_b.visible iframe")["src"]:
             plr_soup = BeautifulSoup(await response.text(), "html.parser")
@@ -70,47 +69,66 @@ async def get_videos(
                     released=None,
                     season=None,
                     episode=None,
+                    streams=[]
                 )
             )
         else:
             plr_soup = BeautifulSoup(await response.text(), "html.parser")
             script_tag = plr_soup.body.find("script")
-            print(script_tag.text)
             # Regex to extract the `file` value
             file_match = re.search(r'file:\s*\'(\[.*?\])\'', script_tag.string, re.DOTALL)
             if not file_match:
                 raise ValueError("File content not found in the script.")
 
             # Extracted file content as a JSON string
-            file_content = file_match.group(1)
-            print("FILE MATCH")
-            print(file_content)
-#             plr_json = json.loads(plr_soup.body.find("script", type="text/javascript").text.split("file: '")[1].split("',")[0])
-
             try:
                 plr_json = json.loads(file_match.group(1))
             except json.JSONDecodeError as e:
                 raise ValueError("Failed to parse JSON data from the file field.") from e
 
             seen_titles = set()
-            for dub in plr_json:
-                for season in dub["folder"]:
-                    for episode in season["folder"]:
+            print(plr_json)
+            if "сезон" in plr_json[0]["title"]:
+                for season in plr_json:
+                    for index, episode in enumerate(season["folder"]):
+                    # for episode in season["folder"]:
                         sesson_episode = f'{episode["title"]}_{season["title"]}'
+                        print(sesson_episode)
                         if sesson_episode not in seen_titles:
                             seen_titles.add(sesson_episode)
                             videos.append(
                                 Videos(
-                                    id=f'{id}/{season["title"]}/{episode["title"]}',
+                                    id=f'eneyida_{id}/{season["title"]}/{episode["title"]}',
                                     title=f'{episode["title"]}',
-                                    thumbnail=episode["poster"],
+                                    # thumbnail=episode["poster"],
                                     released=None,
                                     season=extract_numbers(season["title"])[0],
-                                    episode=extract_numbers(episode["title"])[0],
+                                    episode=index + 1,
+                                    streams=[]
                                 )
                             )
 
-    print(videos)
+            else:
+                for dub in plr_json:
+                    # print(dub["title"])
+                    for season in dub["folder"]:
+                        # print(season["title"])
+                        for index, episode in enumerate(season["folder"]):
+                            sesson_episode = f'{episode["title"]}_{season["title"]}'
+                            if sesson_episode not in seen_titles:
+                                seen_titles.add(sesson_episode)
+                                videos.append(
+                                    Videos(
+                                        id=f'{id}/{season["title"]}/{episode["title"]}',
+                                        title=f'{episode["title"]}',
+                                        thumbnail=episode["poster"],
+                                        released=None,
+                                        season=extract_numbers(season["title"])[0],
+                                        episode=index + 1,
+                                        streams=[]
+                                    )
+                                )
+
     return videos
 
 
@@ -123,9 +141,10 @@ async def get_streams(
     async with session.get(soup.select_one(".tabs_b.visible iframe")["src"]) as response:
 
         plr_soup = BeautifulSoup(await response.text(), "html.parser")
+        # print(plr_soup)
         if "/vid/" in soup.select_one(".tabs_b.visible iframe")["src"]:
+            print("HERE")
             script_tag = plr_soup.body.find("script")
-            print(script_tag)
             if not script_tag:
                 raise ValueError("Script tag with Playerjs initialization not found.")
             file_url_match = re.search(r'file:\s*"(.*?)"', script_tag.text)
@@ -150,19 +169,41 @@ async def get_streams(
 #             plr_json = file_match.group(1)
 #             print(plr_json)
 
+            print("HERE")
             plr_json = json.loads(file_match.group(1))
-            for dub in plr_json:
-                print(dub)
-                for season in dub["folder"]:
-                    if season["title"] == season_param:
-                        for episode in season["folder"]:
-                            if episode["title"] == episode_param:
+            if "сезон" in plr_json[0]["title"]:
+                for season in plr_json:
+                    for index, episode in enumerate(season["folder"]):
+                        # for episode in season["folder"]:
+                        # print(episode)
+                        sesson_episode = f'{episode["title"]}_{season["title"]}'
+                        sesson_episode_param = f'{episode_param}_{season_param}'
+
+                        if(sesson_episode == sesson_episode_param):
+                            for rawStreams in episode["folder"]:
                                 streams["streams"].append(
                                     Stream(
-                                        name=dub["title"],
-                                        url=episode["file"],
+                                        name=f'{episode["title"]} | {rawStreams["title"]}',
+                                        url=rawStreams["file"],
                                     )
                                 )
+
+
+
+
+            else:
+                for dub in plr_json:
+                    for season in dub["folder"]:
+                        if season["title"] == season_param:
+                            for episode in season["folder"]:
+                                if episode["title"] == episode_param:
+                                    streams["streams"].append(
+                                        Stream(
+                                            name=dub["title"],
+                                            url=episode["file"],
+                                        )
+                                    )
+
 
 
 

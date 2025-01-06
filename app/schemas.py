@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from typing import List, Union, Dict
 
 
 class Preview(BaseModel):
@@ -11,6 +12,11 @@ class Preview(BaseModel):
     description: str
 
 
+class Stream(BaseModel):
+    name: str
+    url: str | list[str] | None
+
+
 class Videos(BaseModel):
     id: str
     title: str
@@ -18,6 +24,8 @@ class Videos(BaseModel):
     released: Optional[str] = None
     season: Optional[int] = None
     episode: Optional[int] = None
+    streams: Optional[list[Stream]] = None
+
 
 
 class Series(Preview):
@@ -26,10 +34,6 @@ class Series(Preview):
     background: str
     videos: list[Videos]
 
-
-class Stream(BaseModel):
-    name: str
-    url: str | list[str] | None
 
 
 class Catalogs(BaseModel):
@@ -47,4 +51,6 @@ class Manifest(BaseModel):
     description: str
     types: list[str]
     catalogs: list[Catalogs]
-    resources: list[str]
+    resources: List[Union[str, Dict[str, Union[str, List[str]]]]]
+    idPrefixes: list[str]
+

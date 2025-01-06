@@ -29,3 +29,8 @@ def parse_first_number_from_data_id(tag) -> int:
             raise ValueError(f"No number found in data-id: {data_id}")
     else:
         raise ValueError("data-id not found in the provided tag.")
+
+
+def extract_id(input_id):
+    result = input_id.split("uakino_")[1]
+    return  result

@@ -13,6 +13,8 @@ from .services import (
 
 import aiohttp
 
+from .utils import extract_id
+
 router = APIRouter(prefix="/eneyida")
 
 
@@ -28,52 +30,21 @@ def addon_manifest() -> Manifest:
         types=["movie", "series"],
         catalogs=[
             Catalogs(
-                type="movie",
-                id="eneyida_movie",
-                name="Фільми/Eneyida",
+                type=item[1],
+                id=f"eneyida_{item[2]}",
+                name=f"{item[0]}/Eneyida",
                 extra=[
-                    {"genres": "anime"},
-                    {"name": "skip", "isRequired": False}, ],
-            ),
-            Catalogs(
-                type="series",
-                id="eneyida_series",
-                name="Серіали/Eneyida",
-                extra=[
-                    {"genres": "anime"},
-                    {"name": "skip", "isRequired": False}, ],
-            ),
-            Catalogs(
-                type="cartoon",
-                id="eneyida_movie",
-                name="Мультфильми/Eneyida",
-                extra=[
-                    {"genres": "anime"},
-                    {"name": "skip", "isRequired": False}, ],
-            ),
-            Catalogs(
-                type="series",
-                id="eneyida_cartoon-series",
-                name="Мультсериали/Eneyida",
-                extra=[
-                    {"genres": "anime"},
-                    {"name": "skip", "isRequired": False}, ],
-            ),
-            Catalogs(
-                type="anime",
-                id="eneyida_series",
-                name="Аніме/Eneyida",
-                extra=[
-                    {"genres": "anime"},
-                    {"name": "skip", "isRequired": False}, ],
+                        { "name": "skip", "isRequired": False },
+                        # {"genres": "anime"}
+                       ],
             )
-            # for item in [
-            #     ["Фільми", "movie", "films"],
-            #     ["Серіали", "series", "series"],
-            #     ["Мультфильми", "movie", "cartoon"],
-            #     ["Мультсериали", "series", "cartoon-series"],
-            #     ["Аніме", "series", "anime"],
-            # ]
+            for item in [
+                ["Фільми", "movie", "films"],
+                ["Серіали", "series", "series"],
+                ["Мультфильми", "movie", "cartoon"],
+                ["Мультсериали", "series", "cartoon-series"],
+                ["Аніме", "series", "anime"],
+            ]
         ],
         resources=[
             "catalog",
@@ -81,6 +52,8 @@ def addon_manifest() -> Manifest:
             "stream",
 #             "subtitles"
         ],
+         idPrefixes=['eneyida_'],
+
     )
 
     # Search Catalog
@@ -105,6 +78,8 @@ async def addon_catalog(
     value: str,
     session: aiohttp.ClientSession = Depends(get_session),
 ) -> dict[str, list[Preview]]:
+    print("HELLO")
+    print(f"{settings.main_url}/{value}")
     async with session.get(f"{settings.main_url}/{value}") as response:
         return await get_previews_metadata(await response.text(), type_)
 
@@ -131,11 +106,12 @@ async def addon_catalog_skip(
 async def addon_meta(
     id: str, type_: str, session: aiohttp.ClientSession = Depends(get_session)
 ) -> dict[str, Series]:
-    async with session.get(f"{settings.main_url}/{id}.html") as response:
+    real_id = extract_id(id)
+    async with session.get(f"{settings.main_url}/{real_id}.html") as response:
         series_metadata = await get_series_metadata(
-            id,
+            real_id,
             await response.text(),
-            await get_videos(id, await response.text(), session),
+            await get_videos(real_id, await response.text(), session),
             type_,
         )
 
@@ -149,8 +125,10 @@ async def addon_meta(
 async def addon_stream(
     id: str, season: str = None, episode: str = None, session: aiohttp.ClientSession = Depends(get_session)
 ) -> dict[str, list[Stream]]:
-    async with session.get(f"{settings.main_url}/{id}.html") as response:
-        streams = await get_streams(id, season, episode, session, await response.text())
+    real_id = extract_id(id)
+    print(f"{settings.main_url}/{real_id}.html")
+    async with session.get(f"{settings.main_url}/{real_id}.html") as response:
+        streams = await get_streams(real_id, season, episode, session, await response.text())
     return streams
 
 

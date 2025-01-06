@@ -24,7 +24,7 @@ async def get_previews_metadata(response_data, type_) -> dict[str, list[Preview]
     for item in soup.find_all("div", class_="movie-item"):
         previews_metadata["metas"].append(
             Preview(
-                id=item.find("a", class_="movie-title")["href"].split("/")[-1].split(".")[0],
+                id=f'uakino_{item.find("a", class_="movie-title")["href"].split("/")[-1].split(".")[0]}',
                 type=type_,
                 name=f"{item.find('a', class_='movie-title').text} ${(item.find('div', class_='full-season').text if item.find('div', class_='full-season') else '')}",
                 genres=[],

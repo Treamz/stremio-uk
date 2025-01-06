@@ -15,6 +15,8 @@ from .services import (
 
 import aiohttp
 
+from .utils import extract_id
+
 router = APIRouter(prefix="/uakino")
 
 headers = {
@@ -42,22 +44,31 @@ def addon_manifest() -> Manifest:
                 type=item[1],
                 id=f"uakino_{item[2]}",
                 name=f"{item[0]}/Uakino",
-                extra=[{"genres": "anime"}],
+                extra=[
+                    {"name": "skip", "isRequired": False},
+                    # {"genres": "anime"}
+                ],
             )
             for item in [
                 ["Фільми", "movie", "films"],
                 ["Серіали", "series", "series"],
                 ["Мультфильми", "movie", "cartoon"],
-                ["Мультсериали", "series", "cartoon/cartoonseries"],
+                ["Мультсериали", "series", "cartoon-series"],
                 ["Аніме", "series", "anime"],
             ]
         ],
         resources=[
             "catalog",
             "meta",
+            # {
+            #     "name": "meta",
+            #     "types": ["movie", "series", "cartoon", "anime"],
+            #     "idPrefixes": ["uakino_"]
+            # },
             "stream",
 #             "subtitles"
         ],
+        idPrefixes=['uakino_'],
     )
 
     # Search Catalog
@@ -114,12 +125,12 @@ async def addon_catalog_skip(
 async def addon_meta(
     id: str, type_: str, session: aiohttp.ClientSession = Depends(get_session)
 ) -> dict[str, Series]:
-    print(f"{settings.main_url}/{id}.html")
-    async with session.get(f"{settings.main_url}/{id}.html",headers=headers) as response:
+    real_id = extract_id(id)
+    async with session.get(f"{settings.main_url}/{real_id}.html",headers=headers) as response:
         series_metadata = await get_series_metadata(
-            id,
+            real_id,
             await response.text(),
-            await get_videos(id, await response.text(), session),
+            await get_videos(real_id, await response.text(), session),
             type_,
         )
 
